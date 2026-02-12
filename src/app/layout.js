@@ -5,7 +5,7 @@ export const metadata = {
   title: "Invoice Generator",
   description: "Create professional invoices in minutes.",
   icons: {
-    icon: "/favicon.png", // make sure this exists in /public
+    icon: "/favicon.ico", // make sure this exists in /public
   },
 };
 
