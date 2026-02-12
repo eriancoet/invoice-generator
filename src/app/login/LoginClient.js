@@ -64,25 +64,47 @@ export default function LoginClient() {
     router.push("/app");
   };
 
-  const signUp = async (e) => {
-    e.preventDefault();
-    setErrorMsg("");
-    setNotice("");
-    setLoading(true);
+const signUp = async (e) => {
+  e.preventDefault();
+  setErrorMsg("");
+  setNotice("");
+  setShowForgot(false);
+  setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
 
-    setLoading(false);
-    if (error) return setErrorMsg(error.message);
+  setLoading(false);
 
-    setNotice("Account created! Check your email to confirm your account.");
-  };
+  if (error) {
+    const msg = (error.message || "").toLowerCase();
+
+    // common "already exists" messages
+    if (
+      msg.includes("already") ||
+      msg.includes("registered") ||
+      msg.includes("exists") ||
+      msg.includes("duplicate")
+    ) {
+      setMode("signin");
+      setErrorMsg("That email is already in use. Please sign in instead.");
+      // Let user resend confirmation if they never confirmed
+      setNotice("If you never confirmed your email, click “Resend confirmation email”.");
+      return;
+    }
+
+    setErrorMsg(error.message);
+    return;
+  }
+
+  setNotice("Account created! Check your email to confirm your account.");
+};
+
 
   const resendConfirmation = async () => {
     setErrorMsg("");
