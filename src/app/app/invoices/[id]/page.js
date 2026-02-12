@@ -18,15 +18,27 @@ export default function InvoiceViewPage() {
   const [invoice, setInvoice] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
 
-  // editable fields
+  // Editable fields
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [status, setStatus] = useState("draft");
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
+
+  // Sender (your business)
+  const [senderCompany, setSenderCompany] = useState("");
+  const [senderEmail, setSenderEmail] = useState("");
+  const [senderAddress, setSenderAddress] = useState("");
+  const [senderLogoUrl, setSenderLogoUrl] = useState("");
+
+  // Receiver (client)
+  const [receiverCompany, setReceiverCompany] = useState("");
+  const [receiverName, setReceiverName] = useState("");
+  const [receiverEmail, setReceiverEmail] = useState("");
+  const [receiverAddress, setReceiverAddress] = useState("");
+
+  // Items + tax
   const [items, setItems] = useState([emptyItem]);
   const [taxRate, setTaxRate] = useState(0);
 
-  // share dropdown
+  // Share dropdown
   const [shareOpen, setShareOpen] = useState(false);
   const shareRef = useRef(null);
 
@@ -40,11 +52,7 @@ export default function InvoiceViewPage() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("invoices")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data, error } = await supabase.from("invoices").select("*").eq("id", id).single();
 
       if (error) {
         setErrorMsg(error.message);
@@ -54,11 +62,27 @@ export default function InvoiceViewPage() {
 
       setInvoice(data);
 
-      // hydrate edit state
+      // Hydrate edit state
       setInvoiceNumber(data.invoice_number || "");
       setStatus((data.status || "draft").toLowerCase());
-      setClientName(data.client?.name || "");
-      setClientEmail(data.client?.email || "");
+
+      // NEW: sender/receiver (preferred)
+      setSenderCompany(data.sender?.company || "");
+      setSenderEmail(data.sender?.email || "");
+      setSenderAddress(data.sender?.address || "");
+      setSenderLogoUrl(data.sender?.logo_url || "");
+
+      setReceiverCompany(data.receiver?.company || "");
+      setReceiverName(data.receiver?.name || "");
+      setReceiverEmail(data.receiver?.email || "");
+      setReceiverAddress(data.receiver?.address || "");
+
+      // Backward compatibility: if older invoices used client:{name,email}
+      if (!data.receiver && data.client) {
+        setReceiverName(data.client?.name || "");
+        setReceiverEmail(data.client?.email || "");
+      }
+
       setItems(Array.isArray(data.items) && data.items.length ? data.items : [emptyItem]);
 
       const sub = Number(data.subtotal || 0);
@@ -72,7 +96,7 @@ export default function InvoiceViewPage() {
     if (id) load();
   }, [id, router]);
 
-  // close share menu on outside click + ESC
+  // Close share menu on outside click + ESC
   useEffect(() => {
     if (!shareOpen) return;
 
@@ -122,19 +146,25 @@ export default function InvoiceViewPage() {
     const payload = {
       invoice_number: invoiceNumber,
       status,
-      client: { name: clientName, email: clientEmail },
+      sender: {
+        company: senderCompany,
+        email: senderEmail,
+        address: senderAddress,
+        logo_url: senderLogoUrl,
+      },
+      receiver: {
+        company: receiverCompany,
+        name: receiverName,
+        email: receiverEmail,
+        address: receiverAddress,
+      },
       items,
       subtotal,
       tax,
       total,
     };
 
-    const { data, error } = await supabase
-      .from("invoices")
-      .update(payload)
-      .eq("id", id)
-      .select("*")
-      .single();
+    const { data, error } = await supabase.from("invoices").update(payload).eq("id", id).select("*").single();
 
     setSaving(false);
     if (error) return setErrorMsg(error.message);
@@ -143,9 +173,8 @@ export default function InvoiceViewPage() {
     setEditOpen(false);
   };
 
-  // share helpers
-  const invoiceUrl =
-    typeof window !== "undefined" ? `${window.location.origin}/app/invoices/${id}` : "";
+  // Share helpers
+  const invoiceUrl = typeof window !== "undefined" ? `${window.location.origin}/app/invoices/${id}` : "";
 
   const shareText = `Invoice ${invoiceNumber}\nTotal: ${formatMoney(total)}\n${invoiceUrl}`;
 
@@ -155,21 +184,18 @@ export default function InvoiceViewPage() {
     url: invoiceUrl,
   };
 
-  // Only use native share on MOBILE (so macOS doesn't open Apple share sheet)
-  const isMobile =
-    typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  const canNativeShare =
-    isMobile && typeof navigator !== "undefined" && typeof navigator.share === "function";
+  // Only use native share on MOBILE
+  const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const canNativeShare = isMobile && typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   const shareWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, "_blank");
 
   const shareEmail = () => {
     window.location.href =
-      `mailto:${encodeURIComponent(clientEmail || "")}` +
+      `mailto:${encodeURIComponent(receiverEmail || "")}` +
       `?subject=${encodeURIComponent(`Invoice ${invoiceNumber}`)}` +
       `&body=${encodeURIComponent(
-        `Hi ${clientName || ""},\n\nHere is your invoice:\n${invoiceUrl}\n\nTotal: ${formatMoney(total)}\n\nThanks!`
+        `Hi ${receiverName || ""},\n\nHere is your invoice:\n${invoiceUrl}\n\nTotal: ${formatMoney(total)}\n\nThanks!`
       )}`;
   };
 
@@ -232,14 +258,14 @@ export default function InvoiceViewPage() {
           </button>
 
           <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setEditOpen((v) => !v)}
-              className="cursor-pointer rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50"
-            >
-              {editOpen ? "Close edit" : "Edit"}
-            </button>
+           <button
+                onClick={() => router.push(`/app/invoices/${id}/edit`)}
+                className="cursor-pointer rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50"
+                >
+                Edit
+        </button>
 
-            {/* Dedicated Download button (next to Share/Send) */}
+
             <button
               type="button"
               onClick={downloadPdf}
@@ -320,35 +346,61 @@ export default function InvoiceViewPage() {
 
         {/* Invoice sheet (print-ready) */}
         <div className="print-sheet rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-          <div className="flex items-start justify-between">
-            <div>
+          {/* Header */}
+          <div className="flex items-start justify-between gap-6">
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold text-gray-900">Invoice</h1>
               <p className="mt-1 text-sm text-gray-600">{invoiceNumber}</p>
               <p className="mt-2 text-sm text-gray-600">Date: {formatDate(invoice.created_at)}</p>
             </div>
 
+            {/* Logo + total */}
             <div className="text-right">
-              <span className="inline-flex rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700">
+              <div className="ml-auto flex h-16 w-44 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white">
+                {senderLogoUrl ? (
+                  <img src={senderLogoUrl} alt="Business logo" className="h-14 w-auto object-contain" />
+                ) : (
+                  <span className="text-xs font-semibold text-gray-400">Your logo</span>
+                )}
+              </div>
+
+              <span className="mt-3 inline-flex rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700">
                 {(status || "draft").toUpperCase()}
               </span>
+
               <p className="mt-3 text-2xl font-bold text-gray-900">{formatMoney(total)}</p>
               <p className="text-xs text-gray-500">Total</p>
             </div>
           </div>
 
+          {/* From / Bill To */}
           <div className="mt-8 grid grid-cols-2 gap-6 text-sm">
             <div>
               <p className="text-xs font-semibold text-gray-500">BILL TO</p>
-              <p className="mt-2 font-semibold text-gray-900">{clientName || "—"}</p>
-              <p className="text-gray-600">{clientEmail || "—"}</p>
+
+              <p className="mt-2 font-semibold text-gray-900">
+                {receiverCompany || receiverName || "—"}
+              </p>
+
+              {receiverCompany && receiverName ? (
+                <p className="text-gray-700">{receiverName}</p>
+              ) : null}
+
+              <p className="text-gray-600">{receiverEmail || "—"}</p>
+
+              <p className="whitespace-pre-line text-gray-600">{receiverAddress || "—"}</p>
             </div>
+
             <div className="text-right">
               <p className="text-xs font-semibold text-gray-500">FROM</p>
-              <p className="mt-2 font-semibold text-gray-900">Your Business</p>
-              <p className="text-gray-600">you@business.com</p>
+
+              <p className="mt-2 font-semibold text-gray-900">{senderCompany || "—"}</p>
+              <p className="text-gray-600">{senderEmail || "—"}</p>
+              <p className="whitespace-pre-line text-gray-600">{senderAddress || "—"}</p>
             </div>
           </div>
 
+          {/* Items table */}
           <div className="mt-8 overflow-hidden rounded-xl border border-gray-200">
             <div className="grid grid-cols-12 bg-gray-50 px-4 py-3 text-xs font-semibold text-gray-600">
               <div className="col-span-6">Description</div>
@@ -372,6 +424,7 @@ export default function InvoiceViewPage() {
             </div>
           </div>
 
+          {/* Totals */}
           <div className="mt-6 ml-auto max-w-sm space-y-2 text-sm">
             <div className="flex justify-between text-gray-700">
               <span>Subtotal</span>
@@ -390,7 +443,7 @@ export default function InvoiceViewPage() {
           <p className="mt-10 text-xs text-gray-500">Generated by Invoice Generator</p>
         </div>
 
-        {/* Edit panel (hidden in print) */}
+        {/* Edit panel */}
         {editOpen && (
           <div className="no-print mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
@@ -404,14 +457,56 @@ export default function InvoiceViewPage() {
               </button>
             </div>
 
-            <div className="mt-4 grid gap-4">
+            <div className="mt-4 grid gap-6">
               <Field label="Invoice #" value={invoiceNumber} onChange={setInvoiceNumber} />
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Client name" value={clientName} onChange={setClientName} />
-                <Field label="Client email" value={clientEmail} onChange={setClientEmail} />
+              {/* Sender */}
+              <div className="rounded-xl border border-gray-200 p-4">
+                <p className="text-sm font-semibold text-gray-900">Your business</p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <Field label="Company name" value={senderCompany} onChange={setSenderCompany} />
+                  <Field label="Email" value={senderEmail} onChange={setSenderEmail} />
+                </div>
+                <div className="mt-4">
+                  <label className="text-sm font-medium text-gray-700">Address</label>
+                  <textarea
+                    value={senderAddress}
+                    onChange={(e) => setSenderAddress(e.target.value)}
+                    rows={3}
+                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm outline-none focus:border-gray-300 focus:ring-4 focus:ring-gray-100"
+                  />
+                </div>
+                <div className="mt-4">
+                  <Field label="Logo URL" value={senderLogoUrl} onChange={setSenderLogoUrl} />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Tip: You can paste a URL here, or set this automatically from your upload page.
+                  </p>
+                </div>
               </div>
 
+              {/* Receiver */}
+              <div className="rounded-xl border border-gray-200 p-4">
+                <p className="text-sm font-semibold text-gray-900">Client</p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <Field label="Company name" value={receiverCompany} onChange={setReceiverCompany} />
+                  <Field label="Contact name" value={receiverName} onChange={setReceiverName} />
+                </div>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <Field label="Email" value={receiverEmail} onChange={setReceiverEmail} />
+                  <Field label="Tax %" type="number" value={taxRate} onChange={setTaxRate} />
+                </div>
+                <div className="mt-4">
+                  <label className="text-sm font-medium text-gray-700">Address</label>
+                  <textarea
+                    value={receiverAddress}
+                    onChange={(e) => setReceiverAddress(e.target.value)}
+                    rows={3}
+                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm outline-none focus:border-gray-300 focus:ring-4 focus:ring-gray-100"
+                  />
+                </div>
+              </div>
+
+              {/* Status */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-sm font-medium text-gray-700">Status</label>
@@ -425,11 +520,10 @@ export default function InvoiceViewPage() {
                     <option value="paid">Paid</option>
                   </select>
                 </div>
-
-                <Field label="Tax %" type="number" value={taxRate} onChange={setTaxRate} />
               </div>
 
-              <div className="mt-2">
+              {/* Items */}
+              <div>
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-gray-900">Line items</p>
                   <button
@@ -486,11 +580,11 @@ export default function InvoiceViewPage() {
                     </div>
                   ))}
                 </div>
-              </div>
 
-              <p className="text-xs text-gray-500">
-                Tip: Download PDF opens your print dialog. Choose “Save as PDF”.
-              </p>
+                <p className="mt-4 text-xs text-gray-500">
+                  Tip: Download PDF opens your print dialog. Choose “Save as PDF”.
+                </p>
+              </div>
             </div>
           </div>
         )}
