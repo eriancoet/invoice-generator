@@ -29,7 +29,18 @@ export default function LoginClient() {
     if (err === "confirm_failed") {
       setErrorMsg("Email confirmation failed. Please try signing in again.");
     }
+
+    const confirmed = searchParams.get("confirmed");
+    if (confirmed === "1") {
+      setNotice("Email confirmed! You can sign in now.");
+      setMode("signin");
+    }
   }, [searchParams]);
+
+  const clearMsgs = () => {
+    setErrorMsg("");
+    setNotice("");
+  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -38,23 +49,22 @@ export default function LoginClient() {
 
   const signIn = async (e) => {
     e.preventDefault();
-    setErrorMsg("");
-    setNotice("");
+    clearMsgs();
     setShowForgot(false);
     setLoading(true);
 
+    const cleanEmail = email.trim().toLowerCase();
+
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: cleanEmail,
       password,
     });
 
     setLoading(false);
 
     if (error) {
-      const message =
-        error.message.toLowerCase().includes("invalid")
-          ? "Invalid email or password."
-          : error.message;
+      const msg = (error.message || "").toLowerCase();
+      const message = msg.includes("invalid") ? "Invalid email or password." : error.message;
 
       setErrorMsg(message);
       setShowForgot(true);
@@ -64,55 +74,61 @@ export default function LoginClient() {
     router.push("/app");
   };
 
-const signUp = async (e) => {
-  e.preventDefault();
-  setErrorMsg("");
-  setNotice("");
-  setShowForgot(false);
-  setLoading(true);
+  const signUp = async (e) => {
+    e.preventDefault();
+    clearMsgs();
+    setShowForgot(false);
+    setLoading(true);
 
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
-    },
-  });
+    const cleanEmail = email.trim().toLowerCase();
 
-  setLoading(false);
+    const { error } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
 
-  if (error) {
-    const msg = (error.message || "").toLowerCase();
+    setLoading(false);
 
-    // common "already exists" messages
-    if (
-      msg.includes("already") ||
-      msg.includes("registered") ||
-      msg.includes("exists") ||
-      msg.includes("duplicate")
-    ) {
-      setMode("signin");
-      setErrorMsg("That email is already in use. Please sign in instead.");
-      // Let user resend confirmation if they never confirmed
-      setNotice("If you never confirmed your email, click “Resend confirmation email”.");
+    if (error) {
+      const msg = (error.message || "").toLowerCase();
+
+      // If Supabase does return an "already exists" message, show it nicely.
+      if (msg.includes("already") || msg.includes("registered") || msg.includes("exists") || msg.includes("duplicate")) {
+        setMode("signin");
+        setErrorMsg("That email is already in use. Please sign in instead.");
+        setShowForgot(true);
+        setNotice("If you never confirmed your email, click “Resend confirmation email”.");
+        return;
+      }
+
+      setErrorMsg(error.message);
       return;
     }
 
-    setErrorMsg(error.message);
-    return;
-  }
-
-  setNotice("Account created! Check your email to confirm your account.");
-};
-
+    // IMPORTANT: Supabase may not tell you if the email already exists (security).
+    // So we show a helpful, honest message the user can act on.
+    setNotice(
+      "If this email is new, we sent you a confirmation email. If you already have an account, please sign in instead. If you never confirmed your email, click “Resend confirmation email”."
+    );
+  };
 
   const resendConfirmation = async () => {
-    setErrorMsg("");
+    clearMsgs();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      setErrorMsg("Enter your email first, then resend.");
+      return;
+    }
+
     setLoading(true);
 
     const { error } = await supabase.auth.resend({
       type: "signup",
-      email,
+      email: cleanEmail,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
@@ -128,12 +144,8 @@ const signUp = async (e) => {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
         <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-bold text-gray-900">
-            You’re already signed in
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Signed in as: {userEmail}
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">You’re already signed in</h1>
+          <p className="mt-2 text-sm text-gray-600">Signed in as: {userEmail}</p>
 
           <div className="mt-6 flex gap-3">
             <button
@@ -159,22 +171,15 @@ const signUp = async (e) => {
       <div className="w-full max-w-md">
         {/* Logo / Brand */}
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-            Invoice Generator
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Invoice Generator</h1>
           <p className="mt-2 text-sm text-gray-600">
-            {mode === "signin"
-              ? "Sign in to manage your invoices."
-              : "Create your account to get started."}
+            {mode === "signin" ? "Sign in to manage your invoices." : "Create your account to get started."}
           </p>
         </div>
 
         {/* Card */}
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-          <form
-            onSubmit={mode === "signin" ? signIn : signUp}
-            className="space-y-5"
-          >
+          <form onSubmit={mode === "signin" ? signIn : signUp} className="space-y-5">
             <div>
               <label className="text-sm font-medium text-gray-700">Email</label>
               <input
@@ -188,9 +193,7 @@ const signUp = async (e) => {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700">
-                Password
-              </label>
+              <label className="text-sm font-medium text-gray-700">Password</label>
               <input
                 type="password"
                 required
@@ -211,16 +214,15 @@ const signUp = async (e) => {
               <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
                 <div>{notice}</div>
 
-                {mode === "signup" && (
-                  <button
-                    type="button"
-                    onClick={resendConfirmation}
-                    disabled={loading || !email}
-                    className="mt-3 inline-flex items-center justify-center rounded-lg border border-green-200 bg-white px-3 py-2 text-xs font-semibold text-green-900 shadow-sm hover:bg-green-50 disabled:opacity-60"
-                  >
-                    Resend confirmation email
-                  </button>
-                )}
+                {/* Keep resend available whenever the user has an email typed */}
+                <button
+                  type="button"
+                  onClick={resendConfirmation}
+                  disabled={loading || !email}
+                  className="mt-3 inline-flex items-center justify-center rounded-lg border border-green-200 bg-white px-3 py-2 text-xs font-semibold text-green-900 shadow-sm hover:bg-green-50 disabled:opacity-60"
+                >
+                  Resend confirmation email
+                </button>
               </div>
             )}
 
@@ -228,19 +230,12 @@ const signUp = async (e) => {
               disabled={loading}
               className="w-full rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:opacity-60"
             >
-              {loading
-                ? "Working..."
-                : mode === "signin"
-                ? "Sign in"
-                : "Create account"}
+              {loading ? "Working..." : mode === "signin" ? "Sign in" : "Create account"}
             </button>
 
             {showForgot && (
               <div className="text-center">
-                <a
-                  href="/forgot-password"
-                  className="text-sm font-semibold text-gray-900 hover:underline"
-                >
+                <a href="/forgot-password" className="text-sm font-semibold text-gray-900 hover:underline">
                   Forgot your password?
                 </a>
               </div>
@@ -256,8 +251,7 @@ const signUp = async (e) => {
                   type="button"
                   onClick={() => {
                     setMode("signup");
-                    setErrorMsg("");
-                    setNotice("");
+                    clearMsgs();
                     setShowForgot(false);
                   }}
                   className="font-semibold text-gray-900 hover:underline"
@@ -272,8 +266,7 @@ const signUp = async (e) => {
                   type="button"
                   onClick={() => {
                     setMode("signin");
-                    setErrorMsg("");
-                    setNotice("");
+                    clearMsgs();
                     setShowForgot(false);
                   }}
                   className="font-semibold text-gray-900 hover:underline"
@@ -285,9 +278,7 @@ const signUp = async (e) => {
           </p>
         </div>
 
-        <p className="mt-6 text-center text-xs text-gray-500">
-          By continuing, you agree to our Terms and Privacy Policy.
-        </p>
+        <p className="mt-6 text-center text-xs text-gray-500">By continuing, you agree to our Terms and Privacy Policy.</p>
       </div>
     </main>
   );

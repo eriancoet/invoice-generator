@@ -2,24 +2,38 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export async function GET(request) {
-  const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get("code");
+  const url = new URL(request.url);
 
+  // Supabase commonly sends these:
+  const code = url.searchParams.get("code");
+  const type = url.searchParams.get("type"); // "signup" | "recovery" | etc.
+  const next = url.searchParams.get("next") || "/app";
+
+  // Decide where to go AFTER callback
+  const redirectTo =
+    type === "recovery"
+      ? "/reset-password"
+      : type === "signup"
+      ? "/login?confirmed=1"
+      : next;
+
+  // If no code, just go where we decided
   if (!code) {
-    return NextResponse.redirect(new URL("/login", requestUrl.origin));
+    return NextResponse.redirect(new URL(redirectTo, url.origin));
   }
 
-  // Server-side exchange: code -> session cookies not used here (simple approach)
-  // We'll exchange and then redirect. For production, you'd use @supabase/ssr.
+  // Exchange code for a session (server-side)
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
+
   if (error) {
-    return NextResponse.redirect(new URL("/login?error=confirm_failed", requestUrl.origin));
+    // If exchange fails, bounce to login with an error flag
+    return NextResponse.redirect(new URL("/login?error=confirm_failed", url.origin));
   }
 
-  return NextResponse.redirect(new URL("/app", requestUrl.origin));
+  return NextResponse.redirect(new URL(redirectTo, url.origin));
 }
