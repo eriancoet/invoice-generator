@@ -2,7 +2,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       
-      {/* Navbar */}
+      {/* Navbar 
       <nav className="border-b border-gray-100 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <h1 className="text-lg font-semibold tracking-tight text-gray-900">
@@ -26,7 +26,7 @@ export default function Home() {
           </div>
         </div>
       </nav>
-
+*/}
       {/* Hero Section */}
       <section className="px-6 py-20">
         <div className="mx-auto max-w-3xl text-center">
@@ -45,7 +45,7 @@ export default function Home() {
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
-              href="/login"
+              href="/login?mode=signup"
               className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
             >
               Start Free

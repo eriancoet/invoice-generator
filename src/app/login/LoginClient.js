@@ -11,6 +11,7 @@ export default function LoginClient() {
   const [mode, setMode] = useState("signin"); // signin | signup
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
 
   const [userEmail, setUserEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,11 @@ export default function LoginClient() {
     };
     check();
 
+    // ✅ read mode from URL: /login?mode=signup
+    const urlMode = searchParams.get("mode");
+    if (urlMode === "signup") setMode("signup");
+    if (urlMode === "signin") setMode("signin");
+
     const err = searchParams.get("error");
     if (err === "confirm_failed") {
       setErrorMsg("Email confirmation failed. Please try signing in again.");
@@ -34,8 +40,10 @@ export default function LoginClient() {
     if (confirmed === "1") {
       setNotice("Email confirmed! You can sign in now.");
       setMode("signin");
+      // keep URL clean + consistent
+      router.replace("/login?mode=signin");
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const clearMsgs = () => {
     setErrorMsg("");
@@ -82,22 +90,26 @@ export default function LoginClient() {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    const { error } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+        const { error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+            data: {
+            full_name: fullName.trim(),
+            },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+        });
+
 
     setLoading(false);
 
     if (error) {
       const msg = (error.message || "").toLowerCase();
 
-      // If Supabase does return an "already exists" message, show it nicely.
       if (msg.includes("already") || msg.includes("registered") || msg.includes("exists") || msg.includes("duplicate")) {
         setMode("signin");
+        router.replace("/login?mode=signin");
         setErrorMsg("That email is already in use. Please sign in instead.");
         setShowForgot(true);
         setNotice("If you never confirmed your email, click “Resend confirmation email”.");
@@ -108,8 +120,6 @@ export default function LoginClient() {
       return;
     }
 
-    // IMPORTANT: Supabase may not tell you if the email already exists (security).
-    // So we show a helpful, honest message the user can act on.
     setNotice(
       "If this email is new, we sent you a confirmation email. If you already have an account, please sign in instead. If you never confirmed your email, click “Resend confirmation email”."
     );
@@ -180,6 +190,22 @@ export default function LoginClient() {
         {/* Card */}
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
           <form onSubmit={mode === "signin" ? signIn : signUp} className="space-y-5">
+            {mode === "signup" && (
+            <div>
+                <label className="text-sm font-medium text-gray-700">
+                Full name
+                </label>
+                <input
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="e.g. Rian Coetzee"
+                className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-gray-300 focus:ring-4 focus:ring-gray-100"
+                />
+            </div>
+            )}
+
             <div>
               <label className="text-sm font-medium text-gray-700">Email</label>
               <input
@@ -214,7 +240,6 @@ export default function LoginClient() {
               <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
                 <div>{notice}</div>
 
-                {/* Keep resend available whenever the user has an email typed */}
                 <button
                   type="button"
                   onClick={resendConfirmation}
@@ -253,6 +278,7 @@ export default function LoginClient() {
                     setMode("signup");
                     clearMsgs();
                     setShowForgot(false);
+                    router.replace("/login?mode=signup"); // ✅ keep URL in sync
                   }}
                   className="font-semibold text-gray-900 hover:underline"
                 >
@@ -268,6 +294,7 @@ export default function LoginClient() {
                     setMode("signin");
                     clearMsgs();
                     setShowForgot(false);
+                    router.replace("/login?mode=signin"); // ✅ keep URL in sync
                   }}
                   className="font-semibold text-gray-900 hover:underline"
                 >
