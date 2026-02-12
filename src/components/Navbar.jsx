@@ -75,8 +75,8 @@ export default function Navbar() {
           <Image
             src="/logo.jpg"
             alt="Invoice Generator"
-            width={32}
-            height={32}
+            width={60}
+            height={60}
             priority
           />
           <span className="text-lg font-semibold tracking-tight text-gray-900">

@@ -80,6 +80,7 @@ export default function NewInvoicePage() {
 
       const { data: pub } = supabase.storage.from("logos").getPublicUrl(path);
       const publicUrl = pub?.publicUrl;
+           console.log("Logo URL:", publicUrl);
 
       if (!publicUrl) throw new Error("Could not get a public URL for the logo.");
 
@@ -188,6 +189,7 @@ export default function NewInvoicePage() {
                     </div>
                     <p className="text-xs text-gray-500">This logo will appear on the invoice.</p>
                   </div>
+                  
                 )}
 
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
