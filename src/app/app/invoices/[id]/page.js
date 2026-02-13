@@ -212,7 +212,7 @@ export default function InvoiceViewPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 px-6 py-10">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto w-full max-w-[800px]">
           <div className="h-10 w-72 rounded-xl bg-gray-200 animate-pulse" />
           <div className="mt-6 h-96 rounded-2xl bg-gray-200 animate-pulse" />
         </div>
@@ -241,7 +241,36 @@ export default function InvoiceViewPage() {
     <main className="min-h-screen bg-gray-50 px-6 py-10">
       <style>{`
         @media print {
-          .no-print { display: none !important; }
+          @media print {
+
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+
+    html, body {
+      width: 210mm;
+      height: 297mm;
+      background: white !important;
+    }
+
+    body {
+      margin: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .no-print {
+      display: none !important;
+    }
+
+    .print-sheet {
+      box-shadow: none !important;
+      border: none !important;
+      width: 100% !important;
+    }
+  
+
           body { background: white !important; }
           .print-sheet { box-shadow: none !important; border: none !important; }
         }
@@ -345,7 +374,7 @@ export default function InvoiceViewPage() {
         )}
 
         {/* Invoice sheet (print-ready) */}
-        <div className="print-sheet rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+          <div className="print-sheet bg-white p-10 sm:p-12">
           {/* Header */}
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
