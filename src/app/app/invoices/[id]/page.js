@@ -306,7 +306,7 @@ export default function InvoiceViewPage() {
                       shareWhatsApp();
                       setShareOpen(false);
                     }}
-                    className="cursor-pointer w-full px-4 py-3 text-left text-sm hover:bg-gray-50"
+                    className="cursor-pointer w-full px-4 py-3 text-left text-sm font-medium text-gray-900 hover:bg-gray-50"
                   >
                     WhatsApp
                   </button>
@@ -317,7 +317,7 @@ export default function InvoiceViewPage() {
                       shareEmail();
                       setShareOpen(false);
                     }}
-                    className="cursor-pointer w-full px-4 py-3 text-left text-sm hover:bg-gray-50"
+                    className="cursor-pointer w-full px-4 py-3 text-left text-smfont-medium text-gray-900 hover:bg-gray-50"
                   >
                     Email
                   </button>
@@ -328,7 +328,7 @@ export default function InvoiceViewPage() {
                       await copyLink();
                       setShareOpen(false);
                     }}
-                    className="cursor-pointer w-full px-4 py-3 text-left text-sm hover:bg-gray-50"
+                    className="cursor-pointer w-full px-4 py-3 text-left text-smfont-medium text-gray-900 hover:bg-gray-50"
                   >
                     Copy link
                   </button>
