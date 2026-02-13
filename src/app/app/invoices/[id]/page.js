@@ -206,7 +206,7 @@ export default function InvoiceViewPage() {
   // PDF "download" = open print dialog, user can "Save as PDF"
   const downloadPdf = () => {
     setShareOpen(false);
-    window.print();
+    router.push(`/app/invoices/${id}/print`);
   };
 
   if (loading) {

@@ -23,7 +23,11 @@ export default function PrintInvoicePage() {
         return;
       }
 
-      const { data, error } = await supabase.from("invoices").select("*").eq("id", id).single();
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("id", id)
+        .single();
 
       if (error) {
         setErrorMsg(error.message);
@@ -35,7 +39,7 @@ export default function PrintInvoicePage() {
       setInvoice(data || null);
       setLoading(false);
 
-      // Give React a tick to render before printing
+      // Print after render
       setTimeout(() => window.print(), 300);
     };
 
@@ -57,7 +61,10 @@ export default function PrintInvoicePage() {
     });
   };
 
-  const rows = useMemo(() => (Array.isArray(invoice?.items) ? invoice.items : []), [invoice]);
+  const rows = useMemo(
+    () => (Array.isArray(invoice?.items) ? invoice.items : []),
+    [invoice]
+  );
 
   // Support both schemas:
   const receiver = invoice?.receiver || invoice?.client || {};
@@ -69,21 +76,12 @@ export default function PrintInvoicePage() {
   return (
     <main className="min-h-screen bg-gray-50 px-6 py-10 text-gray-900">
       <style>{`
-        /* Screen layout */
-        .print-sheet {
-          background: white;
-        }
+        .print-sheet { background: white; }
 
-        /* Print layout */
         @media print {
-          @page {
-            size: A4;
-            margin: 16mm;
-          }
+          @page { size: A4; margin: 16mm; }
 
-          html, body {
-            background: white !important;
-          }
+          html, body { background: white !important; }
 
           body {
             margin: 0 !important;
@@ -91,11 +89,19 @@ export default function PrintInvoicePage() {
             print-color-adjust: exact;
           }
 
-          .no-print {
+          .no-print { display: none !important; }
+
+          /* Hide any app chrome */
+          nav, header, .navbar, .app-navbar, [data-navbar="true"] {
             display: none !important;
           }
 
-          /* Remove any “card” look in print */
+          main {
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+          }
+
           .print-sheet {
             box-shadow: none !important;
             border: none !important;
@@ -106,15 +112,10 @@ export default function PrintInvoicePage() {
             padding: 0 !important;
           }
 
-          /* Avoid clipping issues */
           .avoid-break {
             break-inside: avoid;
             page-break-inside: avoid;
           }
-
-        nav {
-         display: none !important;
-            }
         }
       `}</style>
 
@@ -126,6 +127,7 @@ export default function PrintInvoicePage() {
         >
           Print / Save as PDF
         </button>
+
         <button
           onClick={() => window.close()}
           className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50"
