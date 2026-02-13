@@ -111,6 +111,10 @@ export default function PrintInvoicePage() {
             break-inside: avoid;
             page-break-inside: avoid;
           }
+
+        nav {
+         display: none !important;
+            }
         }
       `}</style>
 
