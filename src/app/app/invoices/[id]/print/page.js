@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-
+import { useRouter } from 'next/navigation'
 export default function PrintInvoicePage() {
   const params = useParams();
   const id = params?.id;
@@ -11,6 +11,7 @@ export default function PrintInvoicePage() {
   const [loading, setLoading] = useState(true);
   const [invoice, setInvoice] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const router = useRouter()
 
   useEffect(() => {
     const load = async () => {
@@ -128,12 +129,12 @@ export default function PrintInvoicePage() {
           Print / Save as PDF
         </button>
 
-        <button
-          onClick={() => window.close()}
-          className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50"
-        >
-          Close
-        </button>
+      <button
+        onClick={() => router.push('/app')}
+        className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50"
+      >
+        Dashboard
+      </button>
       </div>
 
       {/* Invoice sheet */}
